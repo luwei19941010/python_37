@@ -12,3 +12,6 @@
 
 #mysql>set password =password('密码')
 
+l=['a', 's', 'd', 'q', 'w', 'e']
+l.clear()
+print(l)
