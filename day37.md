@@ -140,9 +140,9 @@ show grants for 'username'@'192.168.1.%';
 
 #数据的增加
 	#insert into 表名字 values (1,'luwei')	#id=1,name='luwei';
-insert into ftp values (1,'alex','alex3714');
-
-
+	#insert into ftp values (1,'alex','alex3714');
+	#insert into 表名字(字段名，字段名) values(值,值)#所有在字段位置填写了名字的字段和后面的值必须一一对应
+	#insert into 表名字(字段名，字段名) values(值,值),(值,值),(值,值);	
 #数据查看
 	#select * from 表名字;
 
@@ -156,7 +156,41 @@ insert into ftp values (1,'alex','alex3714');
 	
 ```
 
-#### 3.mysql 表操作
+
+
+##### 2.1select 语句
+
+```
+#select 语句
+	#select * from 表；
+	#select 字段，字段 from 表；
+	#select distinct 字段 .. from 表;根据
+	#select 字段，字段(加减乘除)NUM from 表;
+	#select 字段，字段(加减乘除)NUM as new_name from 表;==select 字段，字段(加减乘除)NUM new_name from 表;	
+	#select concat('姓名：',name,'年薪：',salary*12) as new_name from 表名;#拼接
+	#select concat_as (':',name,salary*12) as new_name from 表名;# 用：分割进行拼接
+	#case语句
+	
+	select
+	(
+	case
+		when 字段名 ='值1' then
+			字段名
+		when 字段名 ='值2' then
+			concat(字段名,'_值3')
+		else
+			concat(字段名,'_值4')
+	) as new_name
+	from
+		表名;
+	
+```
+
+
+
+
+
+#### 3.mysql 数据类型
 
 ```
 #mysql的表操作
@@ -572,7 +606,7 @@ mysql> select * from t9;
 rows in set (0.00 sec)
 ```
 
-3.4 ENUM与SET类型
+##### 3.4 ENUM与SET类型
 
 ![image-20200213225923572](C:\Users\davidlu\AppData\Roaming\Typora\typora-user-images\image-20200213225923572.png)
 
@@ -581,8 +615,6 @@ ENUM中文名称叫枚举类型，它的值范围需要在创建表时通过枚�
 
 SET和ENUM非常相似，也是一个字符串对象，里面可以包含0-64个成员。根据成员的不同，存储上也有所不同。set类型可以允许值集合中任意选择1或多个元素进行组合。对超出范围的内容将不允许注入，而对重复的值将进行自动去重。
 ```
-
-
 
 ```
 mysql> create table t10 (name char(20),gender enum('female','male'));
@@ -615,6 +647,127 @@ row in set (0.00 sec)
 mysql> insert into t11 values ('alex','烫头,翻车,看妹子');
 ERROR 1265 (01000): Data truncated for column 'hobby' at row 1
 ```
+
+
+
+#### 4.约束
+
+```
+#unsigned 设置某一个数字无符号
+	#create table tablename(id int(4) unsigned,id2 int(11));
+#not null 某一个字段不能为空
+	# create table t6(id int not null,name char(10));
+#default  给某个字段设置默认值
+	# create table t6(id int not null default 999,name char(10));
+	# insert into t6(name) values('alex');
+#unique	 设置一个字段不能重复
+	# create table t6(id int unique,name char(10));
+	#联合唯一
+#auto_increment  设置某一个int类型的字段，自动增加，自带非空（not null）效果
+	# 自增字段 必须是数字 且 必须是唯一的
+#primary key 设置某一个字段非空且不能重复
+	#一张表只能设置一个主键
+	#一张表最好设置一个主键
+	#约束这个字段非空(not null) 且唯一(unique)
+	#指定第一个非空且唯一的字段会被定义成主键
+	#create tables t7(id int primary key ,name char(10) not null unique);
+#foreign key 外键
+	#	#create table t4(
+	id int,
+	ip char(15),
+	server char(10),
+	port int,
+	foreign key (port) references t5(pid)
+	)
+
+#联合唯一
+	#create table t4(
+	id int,
+	ip char(15),
+	server char(10),
+	port int,
+	unique(ip,port)
+	);
+	
+#联合主键
+	#create table t8(
+	id int,
+	ip char(15),
+	server char(10),
+	port int,
+	primary key(ip,port)
+	);
+	
+#级联删除与级联更新
+	#	#create table t4(
+	id int,
+	ip char(15),
+	server char(10),
+	port int,
+	foreign key (port) references t5(pid) on update cascade on delete cascade/set null/set default
+	);
+```
+
+![image-20200214133713316](C:\Users\davidlu\AppData\Roaming\Typora\typora-user-images\image-20200214133713316.png)
+
+
+
+
+
+#### 5.修改表结构
+
+```
+#添加字段
+	alter table 表名 add 字段名 数据类型(宽度) 约束;
+	alter table 表名 add 字段名 数据类型(宽度) 约束 frist;
+	alter table 表名 add 字段名 数据类型(宽度) 约束 after name;
+#删除字段 
+	alter table 表名 drop 字段名;
+	
+#修改已经存在的字段 的类型 宽度 约束，不能修改字段名字
+	alter table 表名 modify 字段名 char(10) not null;
+	
+#修改已经存在的字段 的类型 宽度 约束 字段名字
+	alter table 表名 change 字段名 new_name char(10) not null;
+
+#字段名调整顺序
+	alter table 表名 modify age int not null after id;
+	alter table 表名 modify age int not null first;#调整到第一个位置
+
+```
+
+https://www.cnblogs.com/Eva-J/articles/9677452.html
+
+
+
+#### 6.多张表的关系
+
+##### 6.1多对一
+
+```
+#多个学生都是同一个班级
+#学生表 关联 班级表
+#学生多 班级唯一
+```
+
+##### 6.2一对一
+
+```
+#客户关系表
+#学生表
+```
+
+##### 6.3多对多
+
+```
+#书 
+#作者
+
+#产生第三张表，把两个关联关系的字段作为第三张表的外键
+
+```
+
+![image-20200214161518588](C:\Users\davidlu\AppData\Roaming\Typora\typora-user-images\image-20200214161518588.png)
 
 
 
