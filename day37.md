@@ -156,7 +156,25 @@ show grants for 'username'@'192.168.1.%';
 	
 ```
 
+##### 总结
 
+```
+##顺序自上而下进行
+select distinct 需要显示的列 from 表
+						 where 条件
+						 group by 分组
+						 having 过滤组条件
+						 order by 排序
+						 limit 前n条 (n,m);== limit n offset m;
+执行SQL						 
+1.执行from 表;找表
+2.执行where 条件;筛选条件
+3.执行group by 分组;进行分组
+4.执行having 过滤租条件;进行过滤
+5.执行select ;对列进行筛选
+6.order by;排序
+7.limit n,m;分页显示
+```
 
 ##### 2.1select 语句
 
@@ -164,7 +182,7 @@ show grants for 'username'@'192.168.1.%';
 #select 语句
 	#select * from 表；
 	#select 字段，字段 from 表；
-	#select distinct 字段 .. from 表;根据
+	#select distinct 字段 .. from 表;去重
 	#select 字段，字段(加减乘除)NUM from 表;
 	#select 字段，字段(加减乘除)NUM as new_name from 表;==select 字段，字段(加减乘除)NUM new_name from 表;	
 	#select concat('姓名：',name,'年薪：',salary*12) as new_name from 表名;#拼接
@@ -186,7 +204,110 @@ show grants for 'username'@'192.168.1.%';
 	
 ```
 
+##### 2.2 where语句
 
+```
+where语句
+	#不支持与聚和连用 
+		#因为执行顺序 总是先执行where 再执行group by分组
+		#所以相关先分组 之后再根据分组做某些条件筛选的时候 where都用不上
+		#只能用having
+	#比较运算 >,<,=,>=,<=,!=,<>
+		#select * from 表名 where 字段名>值1;
+	#范围筛选
+		#多选一
+			#select * from 表名 where 字段名 in (值1,值2,值3...值n);
+			#select * from 表名 where 字段名 not in (值1,值2,值3...值n);
+		#在一个模糊的范围里
+			#在一个数值区间 1000-2000之间的所有人的名字
+				#select * from 表名 where 字段名 between 1000 and 2000;
+			#字符串的模糊查询 like
+				#通配符%,表示匹配任意长度的任意内容
+				#通配符_,表示匹配一个字符长度的任意内容
+				#select * from 表名 where 字段名 like 'X%';
+				#select * from 表名 where 字段名 like 'X_';
+			#正则匹配
+				#select * from 表名 where 字段名 regexp '正则表达式';
+	#逻辑运算-条件的拼接
+		#与
+			#select * from 表名 where 字段名=值1 and 字段名=值2;
+		#非
+			#select * from 表名 where 字段名=值1 or 字段名=值2;
+	
+	#身份运算符-null is null/is not null 
+		#查看是否为null
+		#select * from 表名 where 字段名 is null;
+```
+
+##### 2.3 group by 分组
+
+```
+#分组
+	#select * from 表名 group by 字段名;
+	#会把在group by后面的这个字段，也就是字段名中的每一个不同的项都保留下来，并且把值是这一项的所有行归为一组
+	
+```
+
+##### 2.4 聚合
+
+​	#把很多行的同一个字段进行一些统计，最终得到一个结果
+
+```
+select count(*) from 表名;
+#count(字段)	统计这个字段有多少项，如果为null 不进行统计。
+#sum(字段)	统计这个字段对应的数值的和
+#avg(字段)	统计这个字段对应的数值的平均值
+#min(字段)	求某个字段的最小值
+#max(字段)	求某个字段的最大值
+
+注意#求部门的最高薪资或求公司的最高薪资都可以通过聚合函数取到
+   #但是要得到对应的人，就必须通过多表查询
+```
+
+##### 2.5 分组聚合
+
+```
+#求各个部门的人
+#select count(*) from 表名 group by 字段名;
+```
+
+
+
+##### 2.6 having条件
+
+```
+#过滤 组 一般和group by一起连用
+
+#各个部门人数大于3个的部门
+
+select post from employee group by post having count(*)>3;
+```
+
+##### 2.7排序
+
+```
+#默认从小到大排序 asc
+select * from 表名 order by 字段名;
+#从大到小排序
+select * from 表名 order by 字段名 desc;
+#优先先进行字段1排序，再按字段2排序
+select * from 表名 order by 字段1, 字段2 desc; 按照字段1 升序，按照字段2 降序
+```
+
+
+
+##### 2.8 LIMT限制查询
+
+```
+#显示3条
+#select * from 表名 order by 字段名 desc limt 3;
+
+分页功能
+#select * from 表名 order by 字段名 desc limt 0,3; 1到3
+#select * from 表名 order by 字段名 desc limt 3,3; 4到6
+
+limt n,m ==limt n,offset m;
+```
 
 
 
