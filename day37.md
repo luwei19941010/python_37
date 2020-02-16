@@ -208,7 +208,7 @@ select distinct 需要显示的列 from 表
 
 ```
 where语句
-	#不支持与聚和连用 
+	#不支持与分组连用 
 		#因为执行顺序 总是先执行where 再执行group by分组
 		#所以相关先分组 之后再根据分组做某些条件筛选的时候 where都用不上
 		#只能用having
@@ -245,7 +245,6 @@ where语句
 #分组
 	#select * from 表名 group by 字段名;
 	#会把在group by后面的这个字段，也就是字段名中的每一个不同的项都保留下来，并且把值是这一项的所有行归为一组
-	
 ```
 
 ##### 2.4 聚合
@@ -270,8 +269,6 @@ select count(*) from 表名;
 #求各个部门的人
 #select count(*) from 表名 group by 字段名;
 ```
-
-
 
 ##### 2.6 having条件
 
@@ -309,7 +306,81 @@ select * from 表名 order by 字段1, 字段2 desc; 按照字段1 升序，按�
 limt n,m ==limt n,offset m;
 ```
 
+##### 2.9多表查询
 
+```
+表1.
+mysql> select * from emp;
++----+------------+--------+------+--------+
+| id | name       | sex    | age  | dep_id |
++----+------------+--------+------+--------+
+|  1 | egon       | male   |   18 |    200 |
+|  2 | alex       | female |   48 |    201 |
+|  3 | wupeiqi    | male   |   38 |    201 |
+|  4 | yuanhao    | female |   28 |    202 |
+|  5 | liwenzhou  | male   |   18 |    200 |
+|  6 | jingliyang | female |   18 |    204 |
++----+------------+--------+------+--------+
+
+表2.
+mysql> select * from department;
++------+--------------+
+| id   | name         |
++------+--------------+
+|  200 | 技术         |
+|  201 | 人力资源     |
+|  202 | 销售         |
+|  203 | 运营         |
++------+--------------+
+
+#多表查询
+	#两张表是怎么连在一起的
+	#select * from emp，department;
+	#链接的语法
+	#select 字段 from 表1 xxx join 表2 on 表1.字段=表2.字段;
+	#连表查询
+		#把两张表连在一起查
+		#
+		#内链接 inner join 两张表条件不匹配的项不会出现再结果中
+			#select * from emp inner join department on emp.dep_id =department.id;
+		#外连接
+			#左外链接 left jion 永远显示全量的左表中的数据
+				#select * from emp left join department on emp.dep_id=department.id;
+			#右外链接 right join 永远显示全量的右表中的数据
+				#select * from emp right join department on emp.dep_id=department.id;
+			#全外链接
+				#select * from emp left join department on emp.dep_id=department.id 
+				#union
+				#select * from emp right jion department on emp.dep_id=department.id;
+				
+	#子查询
+		# 找技术部门的所有人的姓名
+		# 先找到部门表技术部门的部门id
+         #select id from department where name='技术';
+         #再找emp表中部门id=200
+         #select name from emp where dep_id=(select id from department where name='技术');
+         
+       带IN关键字的子查询
+         # 找到技术部门和销售部门所有人的姓名
+         # 先找到技术部门和销售部门的的部门id
+         #select id from department where name='技术' or name='销售';
+         #找到emp中部门id=200或者202的人名
+         #select name from emp where dep_id in (select id from department where name='技术' or name='销售');
+         #select emp.name from emp inner jion department on emp.dep_id =department.id where department.name in ('技术','销售');;
+		
+	  带比较运算符的子查询
+	  	#比较运算符：=、!=、>、>=、<、<=、<>
+	  	#查询大于所有人平均年龄的员工名与年龄
+		mysql> select name,age from emp where age > (select avg(age) from emp);
+	
+	  带EXISTS关键字的子查询
+		“EXISTS关字键字表示存在。在使用EXISTS关键字时，内层查询语句不返回查询的记录。
+		而是返回一个真假值。True或False
+		当返回True时，外层查询语句将进行查询；当返回值为False时，外层查询语句不进行查询”
+		mysql> select * from employee
+    	->     where exists
+    	->     (select id from department where id=200);
+```
 
 #### 3.mysql 数据类型
 
