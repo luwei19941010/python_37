@@ -1007,6 +1007,18 @@ https://www.cnblogs.com/Eva-J/articles/9677452.html
 ##### 7.3聚集与辅助索引
 
 ```
+hash类型的索引：查询单条快，范围查询慢
+btree类型的索引：b+树，层数越多，数据量指数级增长（我们就用它，因为innodb默认支持它）
+
+#不同的存储引擎支持的索引类型也不一样
+InnoDB 支持事务，支持行级别锁定，支持 B-tree、Full-text 等索引，不支持 Hash 索引；
+MyISAM 不支持事务，支持表级别锁定，支持 B-tree、Full-text 等索引，不支持 Hash 索引；
+Memory 不支持事务，支持表级别锁定，支持 B-tree、Hash 等索引，不支持 Full-text 索引；
+NDB 支持事务，支持行级别锁定，支持 Hash 索引，不支持 B-tree、Full-text 等索引；
+Archive 不支持事务，支持表级别锁定，不支持 B-tree、Hash、Full-text 等索引；
+```
+
+```
 # 聚集索引和辅助索引
     # 在innodb中 聚集索引和辅助索引并存的
         # 聚集索引 - 主键 更快
@@ -1016,12 +1028,22 @@ https://www.cnblogs.com/Eva-J/articles/9677452.html
     # 在myisam中 只有辅助索引，没有聚集索引
     
     # 索引的种类
-    # primary key 主键 聚集索引  约束的作用：非空 + 唯一
-        # 联合主键
+   	1.聚集索引
+    #primary key 主键 聚集索引  约束的作用：非空 + 唯一
+    #如果未定义主键，MySQL取第一个唯一索引（unique）而且只含非空列（not null）作为主键，InnoDB使用它作为聚簇索引。
+    #如果没有这样的列，InnoDB就自己产生一个这样的ID值，它有六个字节，而且是隐藏的，使其作为聚集索引。
+   		# -PRIMARY KEY(id,name):联合主键索引
+   		
+   	2.辅助索引
     # unique 自带索引 辅助索引   约束的作用：唯一
-        # 联合唯一
+        -UNIQUE(id,name):联合唯一索引
     # index  辅助索引            没有约束作用
-        # 联合索引
+        -INDEX(id,name):联合普通索引
+        
+    '''# 除此之外还有全文索引，即FULLTEXT
+		会员备注信息 ， 如果需要建索引的话，可以选择全文搜索。
+		用于搜索很长一篇文章的时候，效果最好。'''
+        
 # 看一下如何创建索引、创建索引之后的变化
     # create index 索引名字 on 表(字段)
     # DROP INDEX 索引名 ON 表名字;
@@ -1033,7 +1055,134 @@ https://www.cnblogs.com/Eva-J/articles/9677452.html
 
 ![image-20200217195119759](C:\Users\davidlu\AppData\Roaming\Typora\typora-user-images\image-20200217195119759.png)
 
+##### 7.4 创建/删除索引的语法
 
+```
+#方法一：创建表时
+    　　CREATE TABLE 表名 (
+                字段名1  数据类型 [完整性约束条件…],
+                字段名2  数据类型 [完整性约束条件…],
+                [UNIQUE | FULLTEXT | SPATIAL ]   INDEX | KEY
+                [索引名]  (字段名[(长度)]  [ASC |DESC]) 
+                );
+
+
+#方法二：CREATE在已存在的表上创建索引
+        CREATE  [UNIQUE | FULLTEXT | SPATIAL ]  INDEX  索引名 
+                     ON 表名 (字段名[(长度)]  [ASC |DESC]) ;
+		#create index ix_age on t1(age);
+	
+	
+#方法三：ALTER TABLE在已存在的表上创建索引
+        ALTER TABLE 表名 ADD  [UNIQUE | FULLTEXT | SPATIAL ] INDEX
+                             索引名 (字段名[(长度)]  [ASC |DESC]) ;
+         #alter table t1 add index ix_sex(sex);
+		#alter table t1 add index(sex);    
+        
+        
+#删除索引：DROP INDEX 索引名 ON 表名字;
+```
+
+
+
+##### 7.6正确使用索引
+
+```
+#https://www.cnblogs.com/Eva-J/articles/10126413.html#_label1
+1.范围问题
+	#或者说条件不明确，条件中出现这些符号或关键字：>、>=、<、<=、!= 、between...and...、like、
+        # > < >= <= != 
+        # between and
+            # select * from 表 order by age limit 0，5
+            # select * from 表 where id between 1000000 and 1000005;
+        # like
+            # 结果的范围大 索引不生效
+            # 如果 abc% 索引生效，%abc索引就不生效
+            #注意 %在后面查的快，在前面慢。'xx%'快，'%xx'慢
+```
+
+```
+2.如果一列内容的区分度不高，索引也不生效
+	尽量选择区分度高的列作为索引,区分度的公式是count(distinct col)/count(*)，表示字段不重复的比例，比例越大我们扫描的记录数越少，唯一键的区分度是1，而一些状态、性别字段可能在大数据面前区分度就是0，那可能有人会问，这个比例有什么经验值吗？使用场景不同，这个值也很难确定，一般需要join的字段我们都要求是0.1以上，即平均1条扫描10条记录
+```
+
+```
+3.索引列不能在条件中参与计算
+	索引列不能在条件中参与计算，保持列“干净”，比如from_unixtime(create_time) = ’2014-05-29’就不能使用到索引，原因很简单，b+树中存的都是数据表中的字段值，但进行检索时，需要把所有元素都应用函数才能比较，显然成本太大。所以语句应该写成create_time = unix_timestamp(’2014-05-29’)
+
+	# select * from s1 where id*10 = 1000000;  索引不生效
+	# select * from s1 where id = 1000000/10;  索引生效
+```
+
+```
+4.对两列内容进行条件查询
+    # and and条件两端的内容，优先选择一个有索引的，并且树形结构更好的，来进行查询
+    	# 两个条件都成立才能完成where条件，先完成范围小的缩小后面条件的压力
+    	# select * from s1 where id =1000000 and email = 'eva1000000@oldboy';
+    #and的工作原理
+    条件：	a = 10 and b = 'xxx' and c > 3 and d =4
+    索引： 制作联合索引(d,a,b,c)
+    工作原理: 对于连续多个and：mysql会按照联合索引，从左到右的顺序找一个区分度高的索引字段(这样便可以快速锁定很小的范围)，加速查询，即按照d—>a->b->c的顺序
+    
+    
+     '''经过分析，在条件为name='egon' and gender='male' and id>333 and email='xxx'的情况下，我们完全没必要为前三个条件的字段加索引，因为只能用上email字段的索引，前三个字段的索引反而会降低我们的查询效率'''
+     
+     
+        
+    # or or条件的，不会进行优化，只是根据条件从左到右依次筛选
+    	# 条件中带有or的要想命中索引，这些条件中所有的列都是索引列
+    	# select * from s1 where id =1000000 or email = 'eva1000000@oldboy';
+    
+    #or的工作原理
+    条件：a = 10 or b = 'xxx' or c > 3 or d =4
+    索引：制作联合索引(d,a,b,c)      
+    工作原理:对于连续多个or：mysql会按照条件的顺序，从左到右依次判断，即a->b->c->d
+    
+    
+```
+
+```
+5.联合索引  # create index ind_mix on s1(id,name,email);
+	最左前缀匹配原则（详见第八小节），非常重要的原则，对于组合索引mysql会一直向右匹配直到遇到范围查询(>、<、between、like)就停止匹配(指的是范围大了，有索引速度也慢)，比如a = 1 and b = 2 and c > 3 and d = 4 如果建立(a,b,c,d)顺序的索引，d是用不到索引的，如果建立(a,b,d,c)的索引则都可以用到，a,b,d的顺序可以任意调整。
+	
+	# select * from s1 where id =1000000 and email = 'eva1000000@oldboy';
+        # 在联合索引中如果使用了or条件索引就不能生效
+            # select * from s1 where id =1000000 or email = 'eva1000000@oldboy';
+        # 最左前缀原则 ：在联合索引中，条件必须含有在创建索引的时候的第一个索引列
+            # select * from s1 where id =1000000;    能命中索引
+            # select * from s1 where email = 'eva1000000@oldboy';  不能命中索引
+            # (a,b,c,d)
+                # a,b
+                # a,c
+                # a
+                # a,d
+                # a,b,d
+                # a,c,d
+                # a,b,c,d
+        # 在整个条件中，从开始出现模糊匹配的那一刻，索引就失效了
+            # select * from s1 where id >1000000 and email = 'eva1000001@oldboy';
+            # select * from s1 where id =1000000 and email like 'eva%';
+
+```
+
+
+
+
+
+
+
+#### 8.数据备份和事务
+
+```
+# mysqldump -uroot -p123  day40 > D:\code\s21day41\day40.sql
+# mysqldump -uroot -p123 --databases new_db > D:\code\s21day41\db.sql
+
+
+# begin;  # 开启事务
+# select * from emp where id = 1 for update;  # 查询id值，for update添加行锁；
+# update emp set salary=10000 where id = 1; # 完成更新
+# commit; # 提交事务
+```
 
 
 
